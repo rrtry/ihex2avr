@@ -1,0 +1,3 @@
+#!/bin/bash
+gcc -o ihex2asm ihex2asm.c -lm 
+./ihex2asm $1
