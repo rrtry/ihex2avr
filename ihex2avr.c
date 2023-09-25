@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <errno.h>
 
 #define OPERAND_NONE		 0x00
 #define OPERAND_REGISTER	 0x01
@@ -61,6 +62,20 @@ struct Instruction AVR_INSTRUCTION_SET[14] = {
 	{"sbci", 2, {0x00f0, 0x0f0f},  {OPERAND_REGISTER_OFFSET, OPERAND_DATA},  0x4000},
 };
 
+unsigned long int hex_to_int(char *nptr) {
+
+	char *endptr = NULL;
+	errno = 0;
+
+	unsigned long int i = strtoul(nptr, &endptr, 16);
+	if (i == 0 && errno != 0) {
+		fprintf(stderr, "ihex2avr: bad input %s\n", nptr);
+		errno = EINVAL;
+	}
+
+	return i;
+}
+
 int disasm_operand(int operand, int operand_type) {
 
 	int operand_disasm = operand;
@@ -81,6 +96,7 @@ int disasm_operand(int operand, int operand_type) {
 			operand_disasm <<= 1;
 			break;
 	}
+
 	return operand_disasm;
 } 
 
@@ -124,16 +140,19 @@ void print_instruction(size_t *addr, uint32_t opcode, int length, struct Instruc
 			}
 		}
 	}
-
 	fputs("\n", stdout);
 }
 
-void parse_ihex_str(size_t *offset, uint16_t len, char *buff) {
+void fail(FILE *fp, char *buffer) {
+	free(buffer);
+	fclose(fp);
+	exit(EXIT_FAILURE);
+}
 
-	size_t t_length;
+void parse_ihex_str(size_t *offset, uint16_t len, uint8_t checksum, uint8_t type, uint16_t addr, char *buff, FILE *fp) {
 
-	uint8_t data[(len / 2) * sizeof(uint8_t)];
-	uint8_t msb, lsb;
+	uint8_t data[(len / 2)];
+	uint8_t msb, lsb, sum;
 
 	char lsb_buff[3];
 	char msb_buff[3];
@@ -143,8 +162,10 @@ void parse_ihex_str(size_t *offset, uint16_t len, char *buff) {
 		memcpy(msb_buff, buff + i, 2);
 		memcpy(lsb_buff, buff + i + 2, 2);
 
-		msb = strtol(msb_buff, NULL, 16);
-		lsb = strtol(lsb_buff, NULL, 16);
+		msb = hex_to_int(msb_buff); if (errno != 0) fail(fp, buff);
+		lsb = hex_to_int(lsb_buff); if (errno != 0) fail(fp, buff);
+
+		sum = sum + msb + lsb;
 
 		printf("%02X%02X ", lsb, msb);
 		data[i / 2]	  = lsb; 
@@ -152,7 +173,14 @@ void parse_ihex_str(size_t *offset, uint16_t len, char *buff) {
 	}
 
 	fputs("\n\n", stdout);
-	for (int i = 0; i < sizeof(data) / sizeof(uint8_t); i++) {
+
+	sum = sum + type + (len / 2) + (addr >> 8) + (addr & 0xff);
+	if (((~sum + 1) & 0xff) != checksum) {
+		fprintf(stderr, "ihex2avr: checksum mismatch\n");
+		fail(fp, buff);
+	}
+
+	for (int i = 0; i < sizeof(data); i++) {
 
 		uint32_t opcode = data[i] << 8 | data[i + 1];
 		int length = (opcode >> 9) == 0x4a ? 4 : 2;
@@ -183,7 +211,6 @@ void parse_ihex_str(size_t *offset, uint16_t len, char *buff) {
 		i += length - 1;
 		(*offset) += length;
 	}
-
 	fputs("\n", stdout);
 }
 
@@ -191,18 +218,19 @@ void parse_ihex(char *argv[]) {
 
 	FILE* file = fopen(argv[1], "r");
 	if (file == NULL) {
-		fprintf(stderr, "ihex2avr: Could not open %s\n", argv[1]);
+		fprintf(stderr, "ihex2avr: could not open %s\n", argv[1]);
 		exit(EXIT_FAILURE);
 	}
 
-	uint8_t  type;
+	uint8_t  type, checksum;
 	uint16_t length, address;
 
 	size_t buff_size, offset;
 
-	char flen_buff[2 + 1];
-	char addr_buff[4 + 1];
-	char type_buff[2 + 1];
+	char flen_buff[3];
+	char addr_buff[5];
+	char type_buff[3];
+	char chks_buff[3];
 	char *data_buff;
 
 	while (!feof(file)) {
@@ -212,49 +240,49 @@ void parse_ihex(char *argv[]) {
 			break;
 		}
 		
-		fgets(flen_buff, 3, file);
-		fgets(addr_buff, 5, file);
-		fgets(type_buff, 3, file);
+		if (fgets(flen_buff, 3, file) == NULL) { fprintf(stderr, "ihex2avr: unexpected EOF\n"); fail(file, data_buff); }
+		if (fgets(addr_buff, 5, file) == NULL) { fprintf(stderr, "ihex2avr: unexpected EOF\n"); fail(file, data_buff); }
+		if (fgets(type_buff, 3, file) == NULL) { fprintf(stderr, "ihex2avr: unexpected EOF\n"); fail(file, data_buff); }
 
-		length  = strtol(flen_buff, NULL, 16) * 2 + 1;
-		address = strtol(addr_buff, NULL, 16);
-		type	= strtol(type_buff, NULL, 16);
+		length  = hex_to_int(flen_buff); if (errno != 0) fail(file, data_buff);
+		address = hex_to_int(addr_buff); if (errno != 0) fail(file, data_buff);
+		type	= hex_to_int(type_buff); if (errno != 0) fail(file, data_buff);
 
 		if (buff_size == 0) {
-			data_buff = (char *) malloc(length);
+			data_buff = (char *) malloc(length * 2 + 1);
 		} else {
-			char *tmp_buff = realloc(data_buff, length);
+			char *tmp_buff = realloc(data_buff, length * 2 + 1);
 			if (tmp_buff == NULL) {
 				fprintf(stderr, "ihex2avr: Failed to reallocate memory for DATA field\n");
-				goto failure;
+				fail(file, data_buff);
 			}
 			data_buff = tmp_buff;
 		}
 
+		length	  = length * 2 + 1;
 		buff_size = length;
+
 		if (data_buff == NULL) {
 			fprintf(stderr, "ihex2avr: failed to allocate memory for DATA field\n");
-			goto failure;
+			fail(file, data_buff);
 		}
 		if (fgets(data_buff, length, file) == NULL) {
-			fprintf(stderr, "ihex2avr: failed to copy string of %d bytes into a buffer\n", (int) length);
-			goto failure;
-		};
+			fprintf(stderr, "ihex2avr: failed to read DATA field\n");
+			fail(file, data_buff);
+		}
+		if (fgets(chks_buff, 3, file) == NULL) { 
+			fprintf(stderr, "ihex2avr: failed to read CHECKSUM field\n"); 
+			fail(file, data_buff);
+		}
 
 		printf("Length: %d ",  (int) length - 1);
 		printf("Address: %d ", (int) address);
 		printf("Type: %d ",    (int) type);
-		parse_ihex_str(&offset, length - 1, data_buff);
 
-		for (int i = 0; i < 3; i++) {
-			fgetc(file);
-		}
+		checksum = hex_to_int(chks_buff); if (errno != 0) fail(file, data_buff);		
+		parse_ihex_str(&offset, length - 1, checksum, type, address, data_buff, file);
+		fgetc(file);	
 	}
-
-	failure:
-		free(data_buff);
-		fclose(file);
-		exit(EXIT_FAILURE);
 
 	free(data_buff);
 	fclose(file);
