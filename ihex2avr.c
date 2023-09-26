@@ -68,7 +68,7 @@ unsigned long int hex_to_int(char *nptr) {
 	errno = 0;
 
 	unsigned long int i = strtoul(nptr, &endptr, 16);
-	if (i == 0 && errno != 0) {
+	if (nptr == endptr || (i == 0 && errno != 0)) {
 		fprintf(stderr, "ihex2avr: bad input %s\n", nptr);
 		errno = EINVAL;
 	}
@@ -123,9 +123,21 @@ void print_instruction(size_t *addr, uint32_t opcode, int length, struct Instruc
 	int operand_type;
 	int offset;
 
-	printf("%zx: ", *addr);
+	printf("%02zx:    ", *addr);
+	if (length == 4) {
+		printf("%02x %02x %02x %02x    ", 
+			opcode >> 24, (opcode >> 16) & 0xff, (opcode >> 8) & 0xff, opcode & 0xff
+		);
+	} else {
+		printf("%02x %02x    ", (opcode >> 8) & 0xff, opcode & 0xff);
+	}
+
+	if (length == 2) {
+		fputs("      ", stdout);
+	}
+
 	fputs(instr.mnemonic, stdout);
-	fputs(" ", stdout);
+	fputs(strlen(instr.mnemonic) == 4 ? "   " : "    ", stdout);
 
 	for (int i = 0; i < instr.operands; i++) {
 
@@ -167,13 +179,12 @@ void parse_ihex_str(size_t *offset, uint16_t len, uint8_t checksum, uint8_t type
 
 		sum = sum + msb + lsb;
 
-		printf("%02X%02X ", lsb, msb);
+		//printf("%02X%02X ", lsb, msb);
 		data[i / 2]	  = lsb; 
 		data[(i / 2) + 1] = msb;
 	}
 
-	fputs("\n\n", stdout);
-
+	//fputs("\n\n", stdout);
 	sum = sum + type + (len / 2) + (addr >> 8) + (addr & 0xff);
 	if (((~sum + 1) & 0xff) != checksum) {
 		fprintf(stderr, "ihex2avr: checksum mismatch\n");
@@ -211,7 +222,7 @@ void parse_ihex_str(size_t *offset, uint16_t len, uint8_t checksum, uint8_t type
 		i += length - 1;
 		(*offset) += length;
 	}
-	fputs("\n", stdout);
+	//fputs("\n", stdout);
 }
 
 void parse_ihex(char *argv[]) {
@@ -275,9 +286,9 @@ void parse_ihex(char *argv[]) {
 			fail(file, data_buff);
 		}
 
-		printf("Length: %d ",  (int) length - 1);
-		printf("Address: %d ", (int) address);
-		printf("Type: %d ",    (int) type);
+		//printf("Length: %d ",  (int) length - 1);
+		//printf("Address: %d ", (int) address);
+		//printf("Type: %d ",    (int) type);
 
 		checksum = hex_to_int(chks_buff); if (errno != 0) fail(file, data_buff);		
 		parse_ihex_str(&offset, length - 1, checksum, type, address, data_buff, file);
