@@ -121,7 +121,6 @@ void print_instruction(size_t *addr, uint32_t opcode, int length, struct Instruc
 
 	int operand;
 	int operand_type;
-	int offset;
 
 	printf("%02zx:    ", *addr);
 	if (length == 4) {
@@ -155,52 +154,50 @@ void print_instruction(size_t *addr, uint32_t opcode, int length, struct Instruc
 	fputs("\n", stdout);
 }
 
-void fail(FILE *fp, char *buffer) {
-	free(buffer);
+void fail(FILE *fp, char *char_buff, uint8_t *uint_buff) {
+	free(char_buff);
+	free(uint_buff);
 	fclose(fp);
 	exit(EXIT_FAILURE);
 }
 
-void parse_ihex_str(size_t *offset, uint16_t len, uint8_t checksum, uint8_t type, uint16_t addr, char *buff, FILE *fp) {
-
-	uint8_t data[(len / 2)];
-	uint8_t msb, lsb, sum;
-
+void parse_ihex_str(size_t *offset, uint16_t len, uint8_t checksum, uint8_t type, uint16_t addr, char *char_buff, uint8_t *uint_buff, FILE *fp) {
+	uint8_t msb, lsb, sum = 0;
 	char lsb_buff[3];
 	char msb_buff[3];
 
 	for (int i = 0; i < len; i += 4) {
 
-		memcpy(msb_buff, buff + i, 2);
-		memcpy(lsb_buff, buff + i + 2, 2);
+		memcpy(msb_buff, char_buff + i, 2);
+		memcpy(lsb_buff, char_buff + i + 2, 2);
 
-		msb = hex_to_int(msb_buff); if (errno != 0) fail(fp, buff);
-		lsb = hex_to_int(lsb_buff); if (errno != 0) fail(fp, buff);
+		msb = hex_to_int(msb_buff); if (errno != 0) fail(fp, char_buff, uint_buff);
+		lsb = hex_to_int(lsb_buff); if (errno != 0) fail(fp, char_buff, uint_buff);
 
 		sum = sum + msb + lsb;
 
 		//printf("%02X%02X ", lsb, msb);
-		data[i / 2]	  = lsb; 
-		data[(i / 2) + 1] = msb;
+		uint_buff[i / 2]       = lsb; 
+		uint_buff[(i / 2) + 1] = msb;
 	}
 
 	//fputs("\n\n", stdout);
 	sum = sum + type + (len / 2) + (addr >> 8) + (addr & 0xff);
 	if (((~sum + 1) & 0xff) != checksum) {
 		fprintf(stderr, "ihex2avr: checksum mismatch\n");
-		fail(fp, buff);
+		fail(fp, char_buff, uint_buff);
 	}
 
-	for (int i = 0; i < sizeof(data); i++) {
+	for (int i = 0; i < len / 2; i++) {
 
-		uint32_t opcode = data[i] << 8 | data[i + 1];
+		uint32_t opcode = uint_buff[i] << 8 | uint_buff[i + 1];
 		int length = (opcode >> 9) == 0x4a ? 4 : 2;
 
 		if (length == 4) {
-			opcode = data[i + 3] << 0  | 
-				 data[i + 2] << 8  | 
-				 data[i + 1] << 16 | 
-				 data[i + 0] << 24;
+			opcode = uint_buff[i + 3] << 0  | 
+				 uint_buff[i + 2] << 8  | 
+				 uint_buff[i + 1] << 16 | 
+				 uint_buff[i + 0] << 24;
 		}
 
 		struct Instruction instruction;
@@ -236,13 +233,17 @@ void parse_ihex(char *argv[]) {
 	uint8_t  type, checksum;
 	uint16_t length, address;
 
-	size_t buff_size, offset;
+	size_t buff_size = 0;
+	size_t offset    = 0;
 
 	char flen_buff[3];
 	char addr_buff[5];
 	char type_buff[3];
 	char chks_buff[3];
-	char *data_buff;
+
+	char *char_buff	   = NULL;
+	char *temp_buff	   = NULL;
+	uint8_t *uint_buff = NULL;
 
 	while (!feof(file)) {
 
@@ -251,51 +252,67 @@ void parse_ihex(char *argv[]) {
 			break;
 		}
 		
-		if (fgets(flen_buff, 3, file) == NULL) { fprintf(stderr, "ihex2avr: unexpected EOF\n"); fail(file, data_buff); }
-		if (fgets(addr_buff, 5, file) == NULL) { fprintf(stderr, "ihex2avr: unexpected EOF\n"); fail(file, data_buff); }
-		if (fgets(type_buff, 3, file) == NULL) { fprintf(stderr, "ihex2avr: unexpected EOF\n"); fail(file, data_buff); }
+		if (fgets(flen_buff, 3, file) == NULL) { fprintf(stderr, "ihex2avr: unexpected EOF\n"); fail(file, char_buff, uint_buff); }
+		if (fgets(addr_buff, 5, file) == NULL) { fprintf(stderr, "ihex2avr: unexpected EOF\n"); fail(file, char_buff, uint_buff); }
+		if (fgets(type_buff, 3, file) == NULL) { fprintf(stderr, "ihex2avr: unexpected EOF\n"); fail(file, char_buff, uint_buff); }
 
-		length  = hex_to_int(flen_buff); if (errno != 0) fail(file, data_buff);
-		address = hex_to_int(addr_buff); if (errno != 0) fail(file, data_buff);
-		type	= hex_to_int(type_buff); if (errno != 0) fail(file, data_buff);
+		length  = hex_to_int(flen_buff); if (errno != 0) fail(file, char_buff, uint_buff);
+		address = hex_to_int(addr_buff); if (errno != 0) fail(file, char_buff, uint_buff);
+		type	= hex_to_int(type_buff); if (errno != 0) fail(file, char_buff, uint_buff);
+
+		if (length == 0) {
+			continue;
+		}
 
 		if (buff_size == 0) {
-			data_buff = (char *) malloc(length * 2 + 1);
+			char_buff = (char *)    malloc(length * 2 + 1);
+			uint_buff = (uint8_t *) malloc(length);
 		} else {
-			char *tmp_buff = realloc(data_buff, length * 2 + 1);
-			if (tmp_buff == NULL) {
-				fprintf(stderr, "ihex2avr: Failed to reallocate memory for DATA field\n");
-				fail(file, data_buff);
+
+			temp_buff = realloc(char_buff, length * 2 + 1);
+			if (temp_buff == NULL) {
+				fprintf(stderr, "ihex2avr: Failed to reallocate memory for DATA field, %d\n", length * 2 + 1);
+				fail(file, char_buff, uint_buff);
 			}
-			data_buff = tmp_buff;
+
+			char_buff = temp_buff;
+			temp_buff = realloc(uint_buff, length);
+
+			if (temp_buff == NULL) {
+				fprintf(stderr, "ihex2avr: memory allocation failed %d\n", length);
+				fail(file, char_buff, uint_buff);
+			}
+
+			uint_buff = (uint8_t *) temp_buff;
 		}
 
 		length	  = length * 2 + 1;
 		buff_size = length;
 
-		if (data_buff == NULL) {
+		if (char_buff == NULL) {
 			fprintf(stderr, "ihex2avr: failed to allocate memory for DATA field\n");
-			fail(file, data_buff);
+			fail(file, char_buff, uint_buff);
 		}
-		if (fgets(data_buff, length, file) == NULL) {
+		if (fgets(char_buff, length, file) == NULL) {
 			fprintf(stderr, "ihex2avr: failed to read DATA field\n");
-			fail(file, data_buff);
+			fail(file, char_buff, uint_buff);
 		}
 		if (fgets(chks_buff, 3, file) == NULL) { 
 			fprintf(stderr, "ihex2avr: failed to read CHECKSUM field\n"); 
-			fail(file, data_buff);
+			fail(file, char_buff, uint_buff);
 		}
 
 		//printf("Length: %d ",  (int) length - 1);
 		//printf("Address: %d ", (int) address);
 		//printf("Type: %d ",    (int) type);
 
-		checksum = hex_to_int(chks_buff); if (errno != 0) fail(file, data_buff);		
-		parse_ihex_str(&offset, length - 1, checksum, type, address, data_buff, file);
+		checksum = hex_to_int(chks_buff); if (errno != 0) fail(file, char_buff, uint_buff);		
+		parse_ihex_str(&offset, length - 1, checksum, type, address, char_buff, uint_buff, file);
 		fgetc(file);	
 	}
 
-	free(data_buff);
+	free(char_buff);
+	free(uint_buff);
 	fclose(file);
 }
 
