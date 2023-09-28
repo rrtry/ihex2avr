@@ -162,6 +162,7 @@ void fail(FILE *fp, char *char_buff, uint8_t *uint_buff) {
 }
 
 void parse_ihex_str(size_t *offset, uint16_t len, uint8_t checksum, uint8_t type, uint16_t addr, char *char_buff, uint8_t *uint_buff, FILE *fp) {
+
 	uint8_t msb, lsb, sum = 0;
 	char lsb_buff[3];
 	char msb_buff[3];
@@ -265,9 +266,11 @@ void parse_ihex(char *argv[]) {
 		}
 
 		if (buff_size == 0) {
+
 			char_buff = (char *)    malloc(length * 2 + 1);
 			uint_buff = (uint8_t *) malloc(length);
-		} else {
+
+		} else if (buff_size != (length * 2 + 1)) {
 
 			temp_buff = realloc(char_buff, length * 2 + 1);
 			if (temp_buff == NULL) {
