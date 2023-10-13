@@ -4,13 +4,13 @@
 struct OperandFormat OP_FORMAT[8] = {
 
 	{OPERAND_BRANCH_ADDRESS,   ".%+d"  },
-	{OPERAND_BIT,			   "%d"    },
+	{OPERAND_BIT,		   "%d"    },
 	{OPERAND_RELATIVE_ADDRESS, ".%+d"  },
 	{OPERAND_BYTE_ADDRESS,     "0x%02X"},
-	{OPERAND_REGISTER,		   "r%d"   },
+	{OPERAND_REGISTER,	   "r%d"   },
 	{OPERAND_REGISTER_OFFSET,  "r%d"   },
 	{OPERAND_IO_REGISTER,	   "0x%02X"},
-	{OPERAND_DATA,			   "0x%02X"},
+	{OPERAND_DATA,		   "0x%02X"},
 
 };
 
@@ -58,7 +58,7 @@ int32_t disasm_operand(int32_t operand, int operand_type) {
 int32_t operand_bits_from_opcode(uint32_t opcode, uint32_t mask, int length) {
 
 	int32_t bits = 0;
-	int shift	 = 0;
+	int shift    = 0;
 
 	for (int i = 0; i < length * 8; i++) {
 		if ((mask >> i) & 1) {
@@ -93,7 +93,7 @@ void print_instruction(size_t* addr, uint32_t opcode, int length, struct Instruc
 	for (int i = 0; i < instr.operands; i++) {
 
 		operand_type = instr.operand_type[i];
-		operand		 = disasm_operand(operand_bits_from_opcode(opcode, instr.operand_mask[i], length), operand_type);
+		operand	     = disasm_operand(operand_bits_from_opcode(opcode, instr.operand_mask[i], length), operand_type);
 
 		for (int k = 0; i < sizeof(OP_FORMAT) / sizeof(OP_FORMAT[0]); k++) {
 			if (OP_FORMAT[k].operand_type == operand_type) {
