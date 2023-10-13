@@ -1,3 +1,0 @@
-#!/bin/bash
-gcc -o ihex2avr ihex2avr.c -lm 
-./ihex2avr $1
