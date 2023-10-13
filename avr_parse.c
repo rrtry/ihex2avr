@@ -63,7 +63,7 @@ void parse_record(
 		sum = sum + msb + lsb;
 
 		printf("%02X%02X ", lsb, msb);
-		uint_buff[i / 2]	   = lsb;
+		uint_buff[i / 2]       = lsb;
 		uint_buff[(i / 2) + 1] = msb;
 	}
 
@@ -83,16 +83,16 @@ void parse_record(
 
 		if (length == 4) {
 			opcode = uint_buff[i + 3] << 0  |
-					 uint_buff[i + 2] << 8  |
-					 uint_buff[i + 1] << 16 |
-					 uint_buff[i + 0] << 24;
+				 uint_buff[i + 2] << 8  |
+				 uint_buff[i + 1] << 16 |
+				 uint_buff[i + 0] << 24;
 		}
 
 		struct Instruction instruction;
 		for (int j = 0; j < sizeof(AVR_INSTRUCTION_SET) / sizeof(struct Instruction); j++) {
 
 			uint32_t bits = opcode;
-			instruction	  = AVR_INSTRUCTION_SET[j];
+			instruction   = AVR_INSTRUCTION_SET[j];
 
 			for (int k = 0; k < instruction.operands; k++) {
 				bits &= ~instruction.operand_mask[k];
@@ -163,9 +163,9 @@ void parse_hex(char *argv[], int format) {
 			disasm = type == SREC_REC_TYPE_DATA;
 		}
 
-		len		= hex_to_int(flen_buff); if (errno != 0) fail(file, "ihex2avr hex conversion error\n");
+		len	= hex_to_int(flen_buff); if (errno != 0) fail(file, "ihex2avr hex conversion error\n");
 		address = hex_to_int(addr_buff); if (errno != 0) fail(file, "ihex2avr hex conversion error\n");
-		len		= (len - (format == FORMAT_IHEX ? 0 : 3)) * 2 + 1;
+		len	= (len - (format == FORMAT_IHEX ? 0 : 3)) * 2 + 1;
 
 		if (fgets(srec_buff, len, file) == NULL) fail(file, "ihex2avr: failed to read DATA field\n");
 		if (fgets(chks_buff, 3, file)	== NULL) fail(file, "ihex2avr: failed to read CHECKSUM field\n");
