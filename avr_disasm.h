@@ -1,15 +1,15 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define OPERAND_NONE			 0x00
-#define OPERAND_REGISTER		 0x01
+#define OPERAND_NONE		 0x00
+#define OPERAND_REGISTER	 0x01
 #define OPERAND_REGISTER_OFFSET  0x02
 #define OPERAND_BYTE_ADDRESS	 0x04
 #define OPERAND_RELATIVE_ADDRESS 0x08
 #define OPERAND_BRANCH_ADDRESS	 0x10
-#define OPERAND_IO_REGISTER		 0x20
-#define OPERAND_DATA			 0x40
-#define OPERAND_BIT				 0x80
+#define OPERAND_IO_REGISTER	 0x20
+#define OPERAND_DATA		 0x40
+#define OPERAND_BIT		 0x80
 
 typedef struct Instruction {
 	char mnemonic[5];
