@@ -6,7 +6,6 @@
 
 int main(int argc, char* argv[]) {
 
-	/* 
 	if (argc != 3) {
 		fprintf(stderr, "Usage: ihex2avr <format> <file_path>\n");
 		return EXIT_FAILURE;
@@ -19,8 +18,8 @@ int main(int argc, char* argv[]) {
 	if (format == -1) {
 		fprintf(stderr, "ihex2avr: unknown file format %s", argv[1]);
 		return EXIT_FAILURE;
-	} */
+	} 
 
-	parse_hex(argv, FORMAT_IHEX);
+	parse_hex(argv, format);
 	return EXIT_SUCCESS;
 }

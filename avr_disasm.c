@@ -1,7 +1,7 @@
-#include "avr_disasm.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include "avr_disasm.h"
 
 /* r   @r{any register}
    d   @r{`ldi' register (r16-r31)}
@@ -96,7 +96,7 @@ int32_t disasm_operand(int32_t operand, char operand_type) {
 
 int32_t operand_bits_from_opcode(uint32_t opcode, uint16_t mask, int length, char operand_type) {
 
-	int32_t bits = 0x0;
+	int32_t bits = 0;
 	int shift	 = 0;
 	bool i32	 = length == 32;
 
@@ -116,7 +116,65 @@ int32_t operand_bits_from_opcode(uint32_t opcode, uint16_t mask, int length, cha
 	return bits;
 }
 
-void print_instruction(size_t* addr, uint32_t opcode, int length, AVR_Instr instr) {
+int disasm_hexrec(int* temp_len, uint8_t temp_arr[], uint8_t uint_buff[], int len, size_t* offset) {
+
+	AVR_Instr avr_instr;
+	uint32_t  opcode;
+
+	int  length;
+	bool instr = false;
+
+	for (int i = 0; i < len; i++) {
+
+		opcode = uint_buff[i] << 8;
+		instr  = false;
+
+		temp_arr[0] = uint_buff[i];
+		if ((i + 1) < len) { opcode |= uint_buff[i + 1]; }
+		else { *temp_len = 1; return 0; }
+
+		*temp_len = 0;
+
+		for (int j = 0; j < sizeof(AVR_INSTRUCTION_SET) / sizeof(AVR_Instr); j++) {
+
+			avr_instr = AVR_INSTRUCTION_SET[j];
+			length    = avr_instr.len;
+			instr     = (opcode & avr_instr.opcode_mask) == avr_instr.opcode_bits;
+
+			if (instr) {
+				if (length == 32) {
+
+					opcode = uint_buff[i] << 24;
+
+					temp_arr[0] = uint_buff[i + 0];
+					if ((i + 1) < len) { opcode |= uint_buff[i + 1] << 16; }
+					else { *temp_len = 1; return 0; }
+
+					temp_arr[1] = uint_buff[i + 1];
+					if ((i + 2) < len) { opcode |= uint_buff[i + 2] << 8; }
+					else { *temp_len = 2; return 0; }
+
+					temp_arr[2] = uint_buff[i + 2];
+					if ((i + 3) < len) { opcode |= uint_buff[i + 3] << 0; }
+					else { *temp_len = 3; return 0; }
+
+					*temp_len = 0;
+				}
+				disasm_instr(offset, opcode, length, avr_instr);
+				break;
+			}
+		}
+		if (!instr) {
+			return 1;
+		}
+		length /= 8;
+		i += length - 1;
+		(*offset) += length;
+	}
+	return 0;
+}
+
+void disasm_instr(size_t* addr, uint32_t opcode, int length, AVR_Instr instr) {
 
 	printf("%02zx:    ", *addr);
 	if (length == 32) {
@@ -146,7 +204,7 @@ void print_instruction(size_t* addr, uint32_t opcode, int length, AVR_Instr inst
 			operand_type
 		);
 
-		get_operand_format(operand_type, operand_format, instr.operands);
+		get_operand_format(operand_type, operand_format, instr.operands[i]);
 		printf(operand_format, operand);
 		fputs(" ", stdout);
 	}
