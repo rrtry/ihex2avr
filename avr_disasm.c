@@ -3,6 +3,28 @@
 #include <string.h>
 #include <stdbool.h>
 
+/* r   @r{any register}
+   d   @r{`ldi' register (r16-r31)}
+   v   @r{`movw' even register (r0, r2, ..., r28, r30)}
+   a   @r{`fmul' register (r16-r23)}
+   w   @r{`adiw' register (r24,r26,r28,r30)}
+   e   @r{pointer registers (X,Y,Z)}
+   b   @r{base pointer register and displacement ([YZ]+disp)}
+   z   @r{Z pointer register (for [e]lpm Rd,Z[+])}
+   M   @r{immediate value from 0 to 255}
+   n   @r{immediate value from 0 to 255 ( n = ~M ). Relocation impossible}
+   s   @r{immediate value from 0 to 7}
+   P   @r{Port address value from 0 to 63. (in, out)}
+   p   @r{Port address value from 0 to 31. (cbi, sbi, sbic, sbis)}
+   K   @r{immediate value from 0 to 63 (used in `adiw', `sbiw')}
+   i   @r{immediate value}
+   l   @r{signed pc relative offset from -64 to 63}
+   L   @r{signed pc relative offset from -2048 to 2047}
+   h   @r{absolute code address (call, jmp)}
+   S   @r{immediate value from 0 to 7 (S = s << 4)}
+   ?   @r{use this opcode entry if no parameters, else use next opcode entry}
+*/
+
 void get_operand_format(char operand_type, char format[], char operand[]) {
 	switch (operand_type) {
 
@@ -51,7 +73,7 @@ int32_t disasm_operand(int32_t operand, char operand_type) {
 			operand_disasm <<= 1;
 			break;
 		case 'a': // `fmul' register (r16-r23)
-		case 'd': // `ldi' register (r16-r31)
+		case 'd': // `ldi' register  (r16-r31)
 			operand_disasm += 16;
 			break;
 		case 'v': // `movw' even register (r0, r2, ..., r28, r30)
