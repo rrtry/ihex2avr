@@ -1,0 +1,5 @@
+# ninja log v5
+10	83	7202407923138873	CMakeFiles/ihex2avr.dir/main.c.obj	f0744acb602a28bb
+6	84	7202407923236211	CMakeFiles/ihex2avr.dir/avr_disasm.c.obj	743e5810dbec92f9
+3	88	7202407923236211	CMakeFiles/ihex2avr.dir/avr_parse.c.obj	76bc633fc120bc74
+89	302	7202407925238899	ihex2avr.exe	83e88c0c4967e88c

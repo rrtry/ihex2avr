@@ -1,83 +1,103 @@
 #include "avr_disasm.h"
 #include <stdio.h>
+#include <string.h>
+#include <stdbool.h>
 
-struct OperandFormat OP_FORMAT[8] = {
+void get_operand_format(char operand_type, char format[], char operand[]) {
+	switch (operand_type) {
 
-	{OPERAND_BRANCH_ADDRESS,   ".%+d"  },
-	{OPERAND_BIT,		   "%d"    },
-	{OPERAND_RELATIVE_ADDRESS, ".%+d"  },
-	{OPERAND_BYTE_ADDRESS,     "0x%02X"},
-	{OPERAND_REGISTER,	   "r%d"   },
-	{OPERAND_REGISTER_OFFSET,  "r%d"   },
-	{OPERAND_IO_REGISTER,	   "0x%02X"},
-	{OPERAND_DATA,		   "0x%02X"},
+		case 'r':
+		case 'd':
+		case 'v':
+		case 'a':
+		case 'w':
+			strcpy(format, "r%d");
+			break;
 
-};
+		case 'l':
+		case 'L':
+			strcpy(format, ".%+d");
+			break;
 
-struct Instruction AVR_INSTRUCTION_SET[14] = {
+		case 's':
+		case 'S':
+			strcpy(format, "%d");
+			break;
 
-	{"jmp",  1, {0x1f1ffff, 0x0000}, {OPERAND_BYTE_ADDRESS, OPERAND_NONE}, 0x940c0000},
-	{"call", 1, {0x1f1ffff, 0x0000}, {OPERAND_BYTE_ADDRESS, OPERAND_NONE}, 0x940e0000},
+		case 'z':
+		case 'e':
+			strcpy(format, operand);
+			break;
 
-	{"cli",  0, {0x0000, 0x0000}, {OPERAND_NONE, OPERAND_NONE}, 0x94f8},
-	{"nop",  0, {0x0000, 0x0000}, {OPERAND_NONE, OPERAND_NONE}, 0x0000},
+		case 'b':
+			strncpy(format, operand, 2);
+			strcpy(format + 2, "%d");
+			break;
 
-	{"rjmp", 1, {0x0fff, 0x0000},  {OPERAND_RELATIVE_ADDRESS, OPERAND_NONE}, 0xc000},
-	{"cbi",  2, {0x00f8, 0x0007},  {OPERAND_IO_REGISTER, OPERAND_BIT},       0x9800},
-	{"subi", 2, {0x00f0, 0x0f0f},  {OPERAND_REGISTER_OFFSET, OPERAND_DATA},  0x5000},
-	{"breq", 1, {0x03f8, 0x0000},  {OPERAND_BRANCH_ADDRESS, OPERAND_NONE},   0xf001},
-	{"brne", 1, {0x03f8, 0x0000},  {OPERAND_BRANCH_ADDRESS, OPERAND_NONE},   0xf401},
-	{"out",  2, {0x060f, 0x01f0},  {OPERAND_IO_REGISTER, OPERAND_REGISTER},  0xb800},
-	{"ldi",  2, {0x00f0, 0x0f0f},  {OPERAND_REGISTER_OFFSET, OPERAND_DATA},  0xe000},
-	{"eor",  2, {0x01f0, 0x020f},  {OPERAND_REGISTER, OPERAND_REGISTER},     0x2400},
-	{"sbi",  2, {0x00f8, 0x0007},  {OPERAND_IO_REGISTER, OPERAND_BIT},       0x9a00},
-	{"sbci", 2, {0x00f0, 0x0f0f},  {OPERAND_REGISTER_OFFSET, OPERAND_DATA},  0x4000},
-};
+		case 'h':
+		case 'i':
+			strcpy(format, "0x%04X");
+			break;
 
-int32_t disasm_operand(int32_t operand, int operand_type) {
+		default:
+			strcpy(format, "0x%02X");
+	}
+}
+
+int32_t disasm_operand(int32_t operand, char operand_type) {
 	int32_t operand_disasm = operand;
 	switch (operand_type) {
-		case OPERAND_BYTE_ADDRESS:
+		case 'h': // absolute code address (call, jmp)
 			operand_disasm <<= 1;
 			break;
-		case OPERAND_REGISTER_OFFSET:
+		case 'a': // `fmul' register (r16-r23)
+		case 'd': // `ldi' register (r16-r31)
 			operand_disasm += 16;
 			break;
-		case OPERAND_BRANCH_ADDRESS:
+		case 'v': // `movw' even register (r0, r2, ..., r28, r30)
+			operand_disasm *= 2;
+			break;
+		case 'w': // `adiw' register (r24,r26,r28,r30)
+			operand_disasm = 24 + operand_disasm * 2;
+			break;
+		case 'l': // signed pc relative offset from -64 to 63} (breq)
 			operand_disasm = (operand_disasm & (1 << 6)) ? ((-1 << 7) | (operand_disasm & 0x7f)) : operand_disasm & 0x7f;
 			operand_disasm <<= 1;
 			break;
-		case OPERAND_RELATIVE_ADDRESS:
+		case 'L': // signed pc relative offset from -2048 to 2047} (rjmp)
 			operand_disasm = (operand_disasm & (1 << 11)) ? ((-1 << 12) | (operand_disasm & 0xfff)) : operand_disasm & 0xfff;
 			operand_disasm <<= 1;
 			break;
 	}
-	return operand_disasm;
+	return operand_disasm; 
 }
 
-int32_t operand_bits_from_opcode(uint32_t opcode, uint32_t mask, int length) {
+int32_t operand_bits_from_opcode(uint32_t opcode, uint16_t mask, int length, char operand_type) {
 
-	int32_t bits = 0;
-	int shift    = 0;
+	int32_t bits = 0x0;
+	int shift	 = 0;
+	bool i32	 = length == 32;
 
-	for (int i = 0; i < length * 8; i++) {
-		if ((mask >> i) & 1) {
-			if ((opcode >> i) & 1) {
-				bits |= (1 << shift);
+	if (mask != 0x0) {
+		for (int i = 0; i < OPCODE_LEN; i++) {
+			if ((mask >> i) & 1) {
+				if ((opcode >> (i + (i32 ? 16 : 0))) & 1) {
+					bits |= (1 << shift);
+				}
+				shift++;
 			}
-			shift++;
 		}
+	}
+	if (operand_type == 'i' || operand_type == 'h') {
+		bits = (bits << (operand_type == 'h' ? 16 : 0)) | (opcode & 0xffff);
 	}
 	return bits;
 }
 
-void print_instruction(size_t* addr, uint32_t opcode, int length, struct Instruction instr) {
-
-	int32_t operand;
-	int operand_type;
+void print_instruction(size_t* addr, uint32_t opcode, int length, AVR_Instr instr) {
 
 	printf("%02zx:    ", *addr);
-	if (length == 4) {
+	if (length == 32) {
 		printf("%02x %02x %02x %02x    ",
 			opcode >> 24, (opcode >> 16) & 0xff, (opcode >> 8) & 0xff, opcode & 0xff
 		);
@@ -90,18 +110,23 @@ void print_instruction(size_t* addr, uint32_t opcode, int length, struct Instruc
 	fputs(instr.mnemonic, stdout);
 	fputs(strlen(instr.mnemonic) == 4 ? "   " : "    ", stdout);
 
-	for (int i = 0; i < instr.operands; i++) {
+	int32_t  operand;
+	uint32_t operand_mask;
+	char	 operand_type;
+	char	 operand_format[7];
 
-		operand_type = instr.operand_type[i];
-		operand	     = disasm_operand(operand_bits_from_opcode(opcode, instr.operand_mask[i], length), operand_type);
+	for (int i = 0; i < instr.argc; i++) {
 
-		for (int k = 0; i < sizeof(OP_FORMAT) / sizeof(OP_FORMAT[0]); k++) {
-			if (OP_FORMAT[k].operand_type == operand_type) {
-				printf(OP_FORMAT[k].format, operand);
-				fputs(" ", stdout);
-				break;
-			}
-		}
+		operand_type = instr.operand_types[i];
+		operand_mask = instr.operand_masks[i];
+		operand		 = disasm_operand(
+			operand_bits_from_opcode(opcode, operand_mask, length, operand_type),
+			operand_type
+		);
+
+		get_operand_format(operand_type, operand_format, instr.operands);
+		printf(operand_format, operand);
+		fputs(" ", stdout);
 	}
 	fputs("\n", stdout);
 }

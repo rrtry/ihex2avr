@@ -12,10 +12,14 @@ endif()
 project ("ihex2avr")
 
 # Add source to this project's executable.
-add_executable (ihex2avr "avr_parse.c"  "avr_disasm.h" "avr_disasm.c"  "main.c"    "avr_parse.h")
+add_executable (ihex2avr "avr_parse.c"  "avr_disasm.h" "avr_disasm.c"  "avr_main.c"    "avr_parse.h")
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET ihex2avr PROPERTY CXX_STANDARD 20)
+endif()
+
+if(MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
 # TODO: Add tests and install targets if needed.
