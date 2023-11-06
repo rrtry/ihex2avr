@@ -83,11 +83,11 @@ int32_t disasm_operand(int32_t operand, char operand_type) {
 			operand_disasm = 24 + operand_disasm * 2;
 			break;
 		case 'l': // signed pc relative offset from -64 to 63} (breq)
-			operand_disasm = (operand_disasm & (1 << 6)) ? ((-1 << 7) | (operand_disasm & 0x7f)) : operand_disasm & 0x7f;
+			operand_disasm = (operand_disasm & (1 << 6)) ? -((~operand_disasm & 0x7f) + 1) : operand_disasm & 0x7f;
 			operand_disasm <<= 1;
 			break;
 		case 'L': // signed pc relative offset from -2048 to 2047} (rjmp)
-			operand_disasm = (operand_disasm & (1 << 11)) ? ((-1 << 12) | (operand_disasm & 0xfff)) : operand_disasm & 0xfff;
+			operand_disasm = (operand_disasm & (1 << 11)) ? -((~operand_disasm & 0xfff) + 1) : operand_disasm & 0xfff;
 			operand_disasm <<= 1;
 			break;
 	}
