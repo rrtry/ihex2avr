@@ -59,16 +59,24 @@ static void parse_hexrec(
 
 	for (int i = 0; i < len; i += 4) {
 
-		memcpy(msb_buff, rec_buff + i, 2);
-		memcpy(lsb_buff, rec_buff + i + 2, 2);
+		strncpy(msb_buff, rec_buff + i, 2);
+		strncpy(lsb_buff, rec_buff + i + 2, 2);
 
 		msb = hex_to_int(msb_buff); if (errno != 0) fail("ihex2avr: hex conversion error");
 		lsb = hex_to_int(lsb_buff); if (errno != 0) fail("ihex2avr: hex conversion error");
 		sum = sum + msb + lsb;
 
+#ifdef _DEBUG
+		printf("%02X %02X ", msb, lsb);
+#endif
+
 		uint_buff[(i / 2) + temp_len]	  = lsb;
 		uint_buff[(i / 2) + 1 + temp_len] = msb;
 	}
+
+#ifdef _DEBUG
+	printf("\n\n");
+#endif
 
 	sum = format == FORMAT_IHEX ? sum + type + (len / 2) + (addr >> 8) + (addr & 0xff) : 
 		  sum + (len / 2 + 3) + (addr >> 8) + (addr & 0xff);
@@ -81,6 +89,10 @@ static void parse_hexrec(
 	if (disasm_hexrec(&temp_len, temp_arr, uint_buff, (len / 2) + temp_len, offset)) {
 		fail("ihex2avr: unknown instruction\n");
 	}
+	
+#ifdef _DEBUG
+	printf("\n");
+#endif
 }
 
 void parse_hex(char* argv[], int format) {
@@ -151,10 +163,11 @@ void parse_hex(char* argv[], int format) {
 
 		if (disasm) {
 
-			/*
+#ifdef _DEBUG
 			printf("Length: %d ", len - 1);
 			printf("Address: 0x%X ", address);
-			printf("Type: 0x%X ", type); */
+			printf("Type: 0x%X ", type);	
+#endif
 
 			checksum = hex_to_int(chks_buff); if (errno != 0) fail("ihex2avr: hex conversion error\n");
 			parse_hexrec(format, &offset, len - 1, checksum, type, address, hrec_buff, uint_buff, file);

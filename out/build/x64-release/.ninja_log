@@ -1,5 +1,11 @@
 # ninja log v5
 4	75	7186849360773079	CMakeFiles/ihex2avr.dir/avr_disasm.c.obj	bae59b4c9a1eb14
 103	275	7186849362752508	ihex2avr.exe	f7bf1bf7de06b758
-7	75	7186849360773079	CMakeFiles/ihex2avr.dir/main.c.obj	da857e4d93113e15
 1	103	7186849361053336	CMakeFiles/ihex2avr.dir/avr_parse.c.obj	e704bed60f3078fd
+16	92	7211019994359373	CMakeFiles/ihex2avr.dir/avr_main.c.obj	20cef1f40c64b35c
+13	100	7211019994434701	CMakeFiles/ihex2avr.dir/avr_disasm.c.obj	bd0a9df5cfa7cd80
+9	107	7211019994499863	CMakeFiles/ihex2avr.dir/avr_parse.c.obj	d86119c6018786a
+18	126	7211019994680155	CMakeFiles/ihex2avr.dir/avr_instr.c.obj	4a15e911e5921f5b
+126	300	7211019996410023	ihex2avr.exe	85f31040d4265337
+9	110	7211021314394023	CMakeFiles/ihex2avr.dir/avr_instr.c.obj	4a15e911e5921f5b
+111	243	7211021315706424	ihex2avr.exe	85f31040d4265337

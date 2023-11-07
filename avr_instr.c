@@ -166,8 +166,10 @@ int parse_avr_instructions(char* f) {
 		memcpy(avr_instr.operand_masks, operand_masks, sizeof operand_masks);
 		AVR_INSTRUCTION_SET[index++] = avr_instr;
 
-		//printf("%s %s\t%d\t%d\t0x%02X\t0x%02X\t0x%02X\n",
-			//opcode, avr_instr.mnemonic, avr_instr.argc, avr_instr.len, avr_instr.operand_masks[0], avr_instr.operand_masks[1], avr_instr.opcode_bits);
+#ifdef _DEBUG
+		printf("%s %s\t%d\t%d\t0x%02X\t0x%02X\t0x%02X\n",
+			opcode, avr_instr.mnemonic, avr_instr.argc, avr_instr.len, avr_instr.operand_masks[0], avr_instr.operand_masks[1], avr_instr.opcode_bits);
+#endif
 
 		memset(operands[0], 0, sizeof operands[0]);
 		memset(operands[1], 0, sizeof operands[1]);

@@ -22,4 +22,10 @@ if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
+if (${CMAKE_BUILD_TYPE} STREQUAL Debug)
+    set_directory_properties(PROPERTIES COMPILE_DEFINITIONS "_DEBUG")
+else ()
+    set_directory_properties(PROPERTIES COMPILE_DEFINITIONS "RELEASE")
+endif ()
+
 # TODO: Add tests and install targets if needed.
