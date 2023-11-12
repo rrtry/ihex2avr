@@ -97,8 +97,8 @@ int32_t disasm_operand(int32_t operand, char operand_type) {
 int32_t operand_bits_from_opcode(uint32_t opcode, uint16_t mask, int length, char operand_type) {
 
 	int32_t bits = 0;
-	int shift	 = 0;
-	bool i32	 = length == 32;
+	int shift    = 0;
+	bool i32     = length == 32;
 
 	if (mask != 0x0) {
 		for (int i = 0; i < OPCODE_LEN; i++) {
@@ -116,7 +116,7 @@ int32_t operand_bits_from_opcode(uint32_t opcode, uint16_t mask, int length, cha
 	return bits;
 }
 
-int disasm_hexrec(int* temp_len, uint8_t temp_arr[], uint8_t uint_buff[], int len, size_t* offset) {
+void disasm_hexrec(int* temp_len, uint8_t temp_arr[], uint8_t uint_buff[], int len, size_t* offset) {
 
 	AVR_Instr avr_instr;
 	uint32_t  opcode;
@@ -131,7 +131,7 @@ int disasm_hexrec(int* temp_len, uint8_t temp_arr[], uint8_t uint_buff[], int le
 
 		temp_arr[0] = uint_buff[i];
 		if ((i + 1) < len) { opcode |= uint_buff[i + 1]; }
-		else { *temp_len = 1; return 0; }
+		else { *temp_len = 1; return; }
 
 		*temp_len = 0;
 
@@ -148,15 +148,15 @@ int disasm_hexrec(int* temp_len, uint8_t temp_arr[], uint8_t uint_buff[], int le
 
 					temp_arr[0] = uint_buff[i + 0];
 					if ((i + 1) < len) { opcode |= uint_buff[i + 1] << 16; }
-					else { *temp_len = 1; return 0; }
+					else { *temp_len = 1; return; }
 
 					temp_arr[1] = uint_buff[i + 1];
 					if ((i + 2) < len) { opcode |= uint_buff[i + 2] << 8; }
-					else { *temp_len = 2; return 0; }
+					else { *temp_len = 2; return; }
 
 					temp_arr[2] = uint_buff[i + 2];
 					if ((i + 3) < len) { opcode |= uint_buff[i + 3] << 0; }
-					else { *temp_len = 3; return 0; }
+					else { *temp_len = 3; return; }
 
 					*temp_len = 0;
 				}
@@ -165,13 +165,29 @@ int disasm_hexrec(int* temp_len, uint8_t temp_arr[], uint8_t uint_buff[], int le
 			}
 		}
 		if (!instr) {
-			return 1;
+			print_dw(offset, (uint16_t) opcode);
+			length = 16;
 		}
 		length /= 8;
 		i += length - 1;
 		(*offset) += length;
 	}
-	return 0;
+}
+
+void print_db(size_t* addr, uint8_t byte) {
+
+	printf("%02zx:    ", *addr);
+	printf("%02x             .db    0x%02x\n", 
+		byte, byte);
+	*addr += 1;
+}
+
+void print_dw(size_t* addr, uint16_t word) {
+
+	printf("%02zx:    ", *addr);
+	printf("%02x %02x        .dw    0x%02x\n", 
+		(word >> 8) & 0xff, word & 0xff, word);
+	*addr += 2;
 }
 
 void disasm_instr(size_t* addr, uint32_t opcode, int length, AVR_Instr instr) {
@@ -199,7 +215,7 @@ void disasm_instr(size_t* addr, uint32_t opcode, int length, AVR_Instr instr) {
 
 		operand_type = instr.operand_types[i];
 		operand_mask = instr.operand_masks[i];
-		operand		 = disasm_operand(
+		operand	     = disasm_operand(
 			operand_bits_from_opcode(opcode, operand_mask, length, operand_type),
 			operand_type
 		);

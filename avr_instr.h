@@ -1,7 +1,7 @@
 #include <stdint.h>
 
-#define INSTRUCTIONS 145
-#define OPCODE_LEN	 16
+#define INSTRUCTIONS 144
+#define OPCODE_LEN   16
 
 typedef struct AVR_Instr {
 

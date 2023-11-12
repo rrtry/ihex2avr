@@ -12,8 +12,8 @@ int main(int argc, char* argv[]) {
 	} 
 
 	int format = -1;
-	if (strncmp(argv[1], "ihex", 4) == 0) format = FORMAT_IHEX;
-	if (strncmp(argv[1], "srec", 4) == 0) format = FORMAT_SREC;
+	if (strcmp(argv[1], "ihex") == 0) format = FORMAT_IHEX;
+	if (strcmp(argv[1], "srec") == 0) format = FORMAT_SREC;
 
 	if (format == -1) {
 		fprintf(stderr, "ihex2avr: unknown file format %s", argv[1]);

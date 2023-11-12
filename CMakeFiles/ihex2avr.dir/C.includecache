@@ -1,0 +1,30 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/rrtry/ihex2avr/avr_disasm.c
+stdio.h
+-
+string.h
+-
+stdbool.h
+-
+avr_disasm.h
+/home/rrtry/ihex2avr/avr_disasm.h
+
+/home/rrtry/ihex2avr/avr_disasm.h
+stdint.h
+-
+stddef.h
+-
+avr_instr.h
+/home/rrtry/ihex2avr/avr_instr.h
+
+/home/rrtry/ihex2avr/avr_instr.h
+stdint.h
+-
+

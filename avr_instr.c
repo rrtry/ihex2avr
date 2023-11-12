@@ -25,13 +25,13 @@ static bool is_preg(char* reg) {
 
 static bool is_disp(char* reg) {
 	return !strcmp(reg, "X+q") ||
-		   !strcmp(reg, "Y+q") ||
-		   !strcmp(reg, "Z+q");
+	       !strcmp(reg, "Y+q") ||
+	       !strcmp(reg, "Z+q");
 }
 
 static bool is_gpr(char* reg) {
 	return !strcmp(reg, "Rr") ||
-		   !strcmp(reg, "Rd");
+	       !strcmp(reg, "Rd");
 }
 
 static uint16_t get_opcode_mask(char* opcode) {
@@ -61,7 +61,6 @@ static uint16_t get_opcode_bits(char* opcode) {
 static void get_operand_masks(char opcode[17], char operands[2][5], int len, int argc, uint16_t op_masks[2]) {
 
 	char operand;
-
 	bool i32  = len == 32;
 	bool regs = true;
 	bool gpr  = false;
@@ -175,15 +174,9 @@ int parse_avr_instructions(char* f) {
 		memset(operands[1], 0, sizeof operands[1]);
 
 		memset(operand_masks, 0, sizeof operand_masks);
-		memset(instr_args,	  0, sizeof instr_args);
+		memset(instr_args,    0, sizeof instr_args);
 		memset(operand_types, 0, sizeof operand_types);
 	}
-	if (index != INSTRUCTIONS - 1) {
-		fputs("ihex2avr: failed to parse instructions\n", stderr);
-		fclose(fp);
-		return EXIT_FAILURE;
-	}
-
 	fclose(fp);
 	return EXIT_SUCCESS;
 }

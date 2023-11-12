@@ -1,0 +1,1 @@
+/usr/bin/cc CMakeFiles/ihex2avr.dir/avr_parse.c.o CMakeFiles/ihex2avr.dir/avr_disasm.c.o CMakeFiles/ihex2avr.dir/avr_main.c.o CMakeFiles/ihex2avr.dir/avr_instr.c.o -o ihex2avr 
